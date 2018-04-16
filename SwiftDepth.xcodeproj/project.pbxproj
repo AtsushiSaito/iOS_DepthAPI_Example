@@ -11,7 +11,7 @@
 		0D72CB3C207E5C29001418D6 /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D72CB3B207E5C29001418D6 /* ViewController.swift */; };
 		0D72CB41207E5C2B001418D6 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 0D72CB40207E5C2B001418D6 /* Assets.xcassets */; };
 		0D72CB44207E5C2B001418D6 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 0D72CB42207E5C2B001418D6 /* LaunchScreen.storyboard */; };
-		0D72CB4C207E86D1001418D6 /* Ex.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D72CB4B207E86D1001418D6 /* Ex.swift */; };
+		0D72CB902083C3CE001418D6 /* CVPixelBuffer+Ex.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D72CB8F2083C3CE001418D6 /* CVPixelBuffer+Ex.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -21,7 +21,7 @@
 		0D72CB40207E5C2B001418D6 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		0D72CB43207E5C2B001418D6 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		0D72CB45207E5C2B001418D6 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		0D72CB4B207E86D1001418D6 /* Ex.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Ex.swift; sourceTree = "<group>"; };
+		0D72CB8F2083C3CE001418D6 /* CVPixelBuffer+Ex.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CVPixelBuffer+Ex.swift"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -58,8 +58,8 @@
 				0D72CB3B207E5C29001418D6 /* ViewController.swift */,
 				0D72CB40207E5C2B001418D6 /* Assets.xcassets */,
 				0D72CB42207E5C2B001418D6 /* LaunchScreen.storyboard */,
-				0D72CB4B207E86D1001418D6 /* Ex.swift */,
 				0D72CB45207E5C2B001418D6 /* Info.plist */,
+				0D72CB8F2083C3CE001418D6 /* CVPixelBuffer+Ex.swift */,
 			);
 			path = SwiftDepth;
 			sourceTree = "<group>";
@@ -136,7 +136,7 @@
 			files = (
 				0D72CB3C207E5C29001418D6 /* ViewController.swift in Sources */,
 				0D72CB3A207E5C29001418D6 /* AppDelegate.swift in Sources */,
-				0D72CB4C207E86D1001418D6 /* Ex.swift in Sources */,
+				0D72CB902083C3CE001418D6 /* CVPixelBuffer+Ex.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

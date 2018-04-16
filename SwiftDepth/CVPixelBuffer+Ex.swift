@@ -1,19 +1,16 @@
 //
-//  Ex.swift
+//  CVPixelBuffer+Ex.swift
 //  SwiftDepth
 //
-//  Created by AtsushiSaito on 2018/04/12.
+//  Created by AtsushiSaito on 2018/04/16.
 //  Copyright © 2018年 AtsushiSaito. All rights reserved.
 //
 
 import UIKit
-import AVFoundation
-
 
 extension CVPixelBuffer {
     
     func normalize() {
-        
         let width = CVPixelBufferGetWidth(self)
         let height = CVPixelBufferGetHeight(self)
         

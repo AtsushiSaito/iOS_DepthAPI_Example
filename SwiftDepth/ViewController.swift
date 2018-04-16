@@ -9,19 +9,26 @@
 import UIKit
 import AVFoundation
 
+extension ViewController: AVCaptureVideoDataOutputSampleBufferDelegate {
+    
+}
+
+extension ViewController: AVCaptureDepthDataOutputDelegate {
+    
+}
+
 extension ViewController: AVCaptureDataOutputSynchronizerDelegate {
     func dataOutputSynchronizer(_ synchronizer: AVCaptureDataOutputSynchronizer, didOutput synchronizedDataCollection: AVCaptureSynchronizedDataCollection) {
         let DepthSyncData = synchronizedDataCollection.synchronizedData(for: self.DepthOutput) as? AVCaptureSynchronizedDepthData
         let DepthData = DepthSyncData?.depthData
         
         if (DepthData != nil){
-            let DepthImage = CIImage(cvPixelBuffer: (DepthData?.applyingExifOrientation(.right).depthDataMap)!)
             DispatchQueue.main.async {
-                self.DepthImageView.image = UIImage(ciImage: DepthImage)
+                self.DepthImageView.image = self.ConvertDepthImage(DepthData: DepthData!)
             }
         }
         
-        let VideoSyncData = synchronizedDataCollection.synchronizedData(for: self.VideoOutput) as? AVCaptureSynchronizedSampleBufferData
+        /*let VideoSyncData = synchronizedDataCollection.synchronizedData(for: self.VideoOutput) as? AVCaptureSynchronizedSampleBufferData
         let SampleBuffer = VideoSyncData?.sampleBuffer
         if (VideoSyncData?.sampleBufferWasDropped == false) {
             DispatchQueue.main.async {
@@ -30,7 +37,7 @@ extension ViewController: AVCaptureDataOutputSynchronizerDelegate {
             }
         } else {
             print("true")
-        }
+        }*/
     }
 }
 
@@ -43,6 +50,7 @@ class ViewController: UIViewController {
     var PhotoOutput: AVCapturePhotoOutput!
     var DepthOutput: AVCaptureDepthDataOutput!
     var VideoOutput: AVCaptureVideoDataOutput!
+    
     var SyncOutput: AVCaptureDataOutputSynchronizer!
     
     var CaptureSession: AVCaptureSession!
@@ -51,6 +59,10 @@ class ViewController: UIViewController {
     var DepthImageView: UIImageView!
     var VideoImageView: UIImageView!
     
+    let VideoDeviceDiscoverySession = AVCaptureDevice.DiscoverySession(deviceTypes: [.builtInDualCamera, .builtInWideAngleCamera], mediaType: .video, position: .unspecified)
+    let SessionQueue = DispatchQueue(label: "session queue", attributes: [], autoreleaseFrequency: .workItem)
+    let DataOutputQueue = DispatchQueue(label: "video data queue", qos: .userInitiated, attributes: [], autoreleaseFrequency: .workItem)
+
     override func viewDidLoad() {
         super.viewDidLoad()
         
@@ -66,71 +78,104 @@ class ViewController: UIViewController {
         self.view.addSubview(self.VideoImageView)
         
         self.DepthImageView = UIImageView()
-        self.DepthImageView.frame = CGRectMake(0, 60, self.view.bounds.width, self.view.bounds.height - 60)
+        let interval = self.view.bounds.width / 3
+        self.DepthImageView.frame = CGRectMake(0, 100, interval*3, interval*4)
         self.DepthImageView.alpha = 1.0
         self.view.addSubview(self.DepthImageView)
         
-        self.InitCamera()
+        SessionQueue.async {
+            self.InitCamera()
+        }
+        
     }
 
     override func didReceiveMemoryWarning() {
         super.didReceiveMemoryWarning()
     }
     
+    
     func InitCamera(){
-        
-        if let dualCameraDevice = AVCaptureDevice.default(.builtInDualCamera, for: .video, position: .back) {
-            self.Camera = dualCameraDevice
-            print("DualCamera")
-        }
-        
-        do {
-            self.DeviceInput = try AVCaptureDeviceInput(device: self.Camera)
-        } catch let error as NSError {
-            print(error)
-        }
-        
         self.CaptureSession = AVCaptureSession()
-        self.CaptureSession.sessionPreset = .photo
-        
-        self.CaptureSession.beginConfiguration()
-        
-        if (self.CaptureSession.canAddInput(self.DeviceInput)) {
-            self.CaptureSession.addInput(DeviceInput)
-        }
-        
-        let DepthOutputQueue = DispatchQueue(label: "DepthData Queue", qos: .userInitiated, attributes: [], autoreleaseFrequency: .workItem)
-        
         self.DepthOutput = AVCaptureDepthDataOutput()
         self.PhotoOutput = AVCapturePhotoOutput()
         self.VideoOutput = AVCaptureVideoDataOutput()
         
-        if (self.CaptureSession.canAddOutput(self.PhotoOutput)) {
+        let DefaultVideoDevice: AVCaptureDevice? = VideoDeviceDiscoverySession.devices.first
+        do {
+            self.DeviceInput = try AVCaptureDeviceInput(device: DefaultVideoDevice!)
+        } catch let error as NSError {
+            print(error)
+        }
+        
+        self.CaptureSession.beginConfiguration()
+        self.CaptureSession.sessionPreset = .photo
+        
+        // Add a video input
+        guard self.CaptureSession.canAddInput(self.DeviceInput) else {
+            print("Could not add video device input to the session")
+            self.CaptureSession.commitConfiguration()
+            return
+        }
+        self.CaptureSession.addInput(self.DeviceInput)
+        
+        // Add a video data output
+        if self.CaptureSession.canAddOutput(self.VideoOutput) {
+            self.CaptureSession.addOutput(self.VideoOutput)
+            self.VideoOutput.videoSettings = [kCVPixelBufferPixelFormatTypeKey as String: Int(kCVPixelFormatType_32BGRA)]
+            self.VideoOutput.setSampleBufferDelegate(self, queue: self.DataOutputQueue)
+        } else {
+            print("Could not add video data output to the session")
+            self.CaptureSession.commitConfiguration()
+            return
+        }
+        
+        if self.CaptureSession.canAddOutput(self.PhotoOutput) {
             self.CaptureSession.addOutput(self.PhotoOutput)
+            
+            self.PhotoOutput.isHighResolutionCaptureEnabled = true
+            
+            if self.PhotoOutput.isDepthDataDeliverySupported {
+                self.PhotoOutput.isDepthDataDeliveryEnabled = true
+            }
+        } else {
+            print("Could not add photo output to the session")
+            self.CaptureSession.commitConfiguration()
+            return
         }
         
-        if (self.PhotoOutput.isDepthDataDeliverySupported) {
-            self.PhotoOutput.isDepthDataDeliveryEnabled = true
-            self.DepthOutput.isFilteringEnabled = true
-        }
-        
-        if (self.CaptureSession.canAddOutput(self.DepthOutput)) {
+        // Add a depth data output
+        if self.CaptureSession.canAddOutput(self.DepthOutput) {
             self.CaptureSession.addOutput(self.DepthOutput)
+            self.DepthOutput.setDelegate(self, callbackQueue: self.DataOutputQueue)
+            //self.DepthOutput.isFilteringEnabled = true
             if let connection = self.DepthOutput.connection(with: .depthData) {
                 connection.isEnabled = true
             } else {
                 print("No AVCaptureConnection")
             }
+        } else {
+            print("Could not add depth data output to the session")
+            self.CaptureSession.commitConfiguration()
+            return
         }
         
-        if (self.CaptureSession.canAddOutput(self.VideoOutput)) {
-            self.CaptureSession.addOutput(self.VideoOutput)
-        }
-        
+        self.DepthOutput.connections[0].videoOrientation = .portrait
         self.SyncOutput = AVCaptureDataOutputSynchronizer(dataOutputs: [self.VideoOutput, self.DepthOutput])
-        self.CaptureSession.commitConfiguration()
+        self.SyncOutput!.setDelegate(self, queue: self.DataOutputQueue)
         
-        self.SyncOutput.setDelegate(self, queue: DepthOutputQueue)
+        if self.PhotoOutput.isDepthDataDeliverySupported {
+            if let frameDuration = DefaultVideoDevice?.activeDepthDataFormat?.videoSupportedFrameRateRanges.first?.minFrameDuration {
+                do {
+                    try DefaultVideoDevice?.lockForConfiguration()
+                    DefaultVideoDevice?.activeVideoMinFrameDuration = frameDuration
+                    DefaultVideoDevice?.unlockForConfiguration()
+                } catch {
+                    print("Could not lock device for configuration: \(error)")
+                }
+            }
+        }
+        
+        self.CaptureSession.commitConfiguration()
         
         self.CaptureSession.startRunning()
 
@@ -152,11 +197,19 @@ class ViewController: UIViewController {
         let pixelBufferHeight = CGFloat(CVPixelBufferGetHeight(pixelBuffer))
         let imageRect:CGRect = CGRectMake(0,0,pixelBufferWidth, pixelBufferHeight)
         let ciContext = CIContext.init()
-        let cgimage = ciContext.createCGImage(ciImage, from: imageRect )
+        let cgimage = ciContext.createCGImage(ciImage, from: imageRect)
         
         // CGImageからUIImageを作成
         let image = UIImage(cgImage: cgimage!, scale: 1.0, orientation: UIImageOrientation.right)
         return image
+    }
+    
+    func ConvertDepthImage(DepthData: AVDepthData) -> UIImage{
+        let ConvertDepth = DepthData.converting(toDepthDataType: kCVPixelFormatType_DisparityFloat32)
+        let DepthMap: CVPixelBuffer = ConvertDepth.depthDataMap
+        DepthMap.normalize()
+        let DepthImage = CIImage(cvPixelBuffer: DepthMap)
+        return UIImage(ciImage: DepthImage)
     }
 }
 
